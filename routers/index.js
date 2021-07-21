@@ -1,5 +1,6 @@
 var API_KEY = "1234";
 
+const { request } = require("express");
 var express = require("express");
 var router = express.Router();
 const { poolPromise, sql } = require("../db");
@@ -560,41 +561,41 @@ router.post("/createOrder", async (req, res, next) => {
   }
 });
 
-// router.get("/orderDetail", async (req, res, next) => {
-//   console.log(req.query);
-//   if (req.query.key != API_KEY) {
-//     res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
-//   } else {
-//     var orderId = req.query.orderId;
-//     if (orderId != null) {
-//       try {
-//         const pool = await poolPromise;
-//         const queryResult = await pool
-//           .request()
-//           .input("orderId", sql.Int, orderId)
-//           .query(
-//             "Select ItemId, Quantity, Price, Discount, Size, Addon, " +
-//               " ExtraPrice From OrderDetail Where OrderId = @orderId"
-//           );
-//         if (queryResult.recordset.length > 0) {
-//           res.end(
-//             JSON.stringify({ success: true, result: queryResult.recordset })
-//           );
-//         } else {
-//           res.end(JSON.stringify({ success: false, message: "Empty" }));
-//         }
-//       } catch (err) {
-//         res.status(500);
-//         res.end(JSON.stringify({ success: false, message: err.message }));
-//       }
-//     } else {
-//       JSON.stringify({
-//         success: false,
-//         message: "Missing orderFbid in query",
-//       });
-//     }
-//   }
-// });
+router.get("/orderDetail", async (req, res, next) => {
+  console.log(req.query);
+  if (req.query.key != API_KEY) {
+    res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
+  } else {
+    var orderId = req.query.orderId;
+    if (orderId != null) {
+      try {
+        const pool = await poolPromise;
+        const queryResult = await pool
+          .request()
+          .input("orderId", sql.Int, orderId)
+          .query(
+            "Select ItemId, Quantity, Price, Discount, Size, Addon, " +
+              " ExtraPrice From OrderDetail Where OrderId = @orderId"
+          );
+        if (queryResult.recordset.length > 0) {
+          res.end(
+            JSON.stringify({ success: true, result: queryResult.recordset })
+          );
+        } else {
+          res.end(JSON.stringify({ success: false, message: "Empty" }));
+        }
+      } catch (err) {
+        res.status(500);
+        res.end(JSON.stringify({ success: false, message: err.message }));
+      }
+    } else {
+      JSON.stringify({
+        success: false,
+        message: "Missing orderFbid in query",
+      });
+    }
+  }
+});
 
 router.post("/updateOrder", async (req, res, next) => {
   console.log(req.body);
@@ -604,67 +605,53 @@ router.post("/updateOrder", async (req, res, next) => {
     var order_id = req.body.orderId;
     var order_detail;
 
-    // try {
-    //   order_detail = JSON.parse(JSON.stringify(req.body.orderDetails));
-    // } catch (err) {
-    //   res.status(500);
-    //   res.send(JSON.stringify({ success: false, message: err.message }));
-    // }
+    try {
+      order_detail = JSON.parse(JSON.stringify(req.body.orderDetails));
+    } catch (err) {
+      res.status(500);
+      res.send(JSON.stringify({ success: false, message: err.message }));
+    }
   }
   if (order_id != null) {
     try {
       const pool = await poolPromise;
-      const table = new sql.Table('Size');
-      table.create = true;
-      table.columns.add("Id", sql.Int, { nullable: false, primary: true });
-      table.columns.add("Description", sql.NVarChar, { nullable: true});
-      table.columns.add("ExtraPrice", sql.Int, { nullable: true});
-      // table.columns.add("Quantity", sql.Int, { nullable: true });
-      // table.columns.add("Price", sql.Float, { nullable: true });
-      // table.columns.add("Discount", sql.Int, { nullable: true });
-      // table.columns.add("Size", sql.NVarChar(50), { nullable: true });
-      // table.columns.add("Addon", sql.NVarChar(4000), { nullable: true });
-      // table.columns.add("ExtraPrice", sql.Float, { nullable: true });
-
-      // for (i = 0; i < order_detail.length; i++) {
-      //   table.rows.add(
-      //     order_id,
-      //     order_detail[i]["foodId"],
-      //     order_detail[i]["foodQuantity"],
-      //     order_detail[i]["foodPrice"],
-      //     order_detail[i]["foodDiscount"],
-      //     order_detail[i]["foodSize"],
-      //     order_detail[i]["foodAddon"],
-      //     parseFloat(order_detail[i]["foodExtraPrice"])
-      //   );
-      // }
-
-      //values.forEach(arr => table.rows.add.apply(null, arr));
-      table.rows.add(4, "LonNhat", 5);
-      const request = pool.request();
-      request.bulk(table, (err, result) => {
-        if (err) {
-          console.log(err);
-          res.send(JSON.stringify({ success: false, message: err.message }));
-        } else {
-          res.send(
-            JSON.stringify({ success: true, message: "Update Success" })
+      var rows = 0;
+      for (i = 0; i < order_detail.length; i++) {
+        const queryResult = await pool
+          .request()
+          .input("OrderId", sql.Int, order_id)
+          .input("ItemId", sql.Int, order_detail[i]["foodId"])
+          .i //nput("Quantity", sql.Int, order_detail[i]["foodQuantity"])
+          .input("Price", sql.Float, order_detail[i]["foodPrice"])
+          .input("Discount", sql.Int, 0)
+          .input("Size", sql.NVarChar(50), order_detail[i]["foodSize"])
+          .input("Addon", sql.NVarChar(4000), order_detail[i]["foodAddon"])
+          .input(
+            "ExtraPrice",
+            sql.Float,
+            parseFloat(order_detail[i]["foodExtraPrice"])
+          )
+          .query(
+            "Insert Into OrderDetail(OrderId, ItemId, Quantity, Price, Discount, Size, Addon, ExtraPrice)" +
+              " Values(@OrderId, @ItemId, @Quantity, @Price, @Discount, @Size, @Addon, @ExtraPrice)"
           );
-        }
-      });
-      // const request = pool.request();
-      // const results = await request.bulk(table);
-      // console.log(`rows affected ${results.rowsAffected}`);
-      // request.bulk(table, (err, resultBulk) => {
-      //   if (err) {
-      //     console.log(err);
-      //     res.send(JSON.stringify({ success: false, message: err.message }));
-      //   } else {
-      //     res.send(
-      //       JSON.stringify({ success: true, message: "Update Success" })
-      //     );
-      //   }
-      // });
+        console.log(queryResult);
+        rows += 1;
+      }
+
+      if (rows > 0) {
+        res.send(JSON.stringify({ success: true, message: "Success" }));
+      } else {
+        res.send(JSON.stringify({ success: false, message: "Not Success" }));
+      }
+
+      // if (queryResult.recordset.length > 0) {
+      //   res.end(
+      //     JSON.stringify({ success: true, result: queryResult.recordset })
+      //   );
+      // } else {
+      //   res.end(JSON.stringify({ success: false, message: "Empty" }));
+      // }
     } catch (err) {
       res.status(500);
       res.end(JSON.stringify({ success: false, message: err.message }));
@@ -679,6 +666,160 @@ router.post("/updateOrder", async (req, res, next) => {
   }
 });
 // ---------------------------------------------------
+// Favorite table
+// GET/ POST/ DELETE
+router.get("/favorite", async (req, res, next) => {
+  console.log(req.query);
+  if (req.query.key != API_KEY) {
+    res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
+  } else {
+    var fbid = req.query.fbid;
+    if (fbid != null) {
+      try {
+        const pool = await poolPromise;
+        const queryResult = await pool
+          .request()
+          .input("Fbid", sql.NVarChar, fbid)
+          .query(
+            "Select Fbid, FoodId, RestaurantId, RestaurantName, FoodName, FoodImage, Price " +
+              " From Favorite Where Fbid = @Fbid"
+          );
+        if (queryResult.recordset.length > 0) {
+          res.end(
+            JSON.stringify({ success: true, result: queryResult.recordset })
+          );
+        } else {
+          res.end(JSON.stringify({ success: false, message: "Empty" }));
+        }
+      } catch (err) {
+        res.status(500);
+        res.end(JSON.stringify({ success: false, message: err.message }));
+      }
+    } else {
+      JSON.stringify({
+        success: false,
+        message: "Missing fbid in query",
+      });
+    }
+  }
+});
+
+router.get("/favoriteByRestaurant", async (req, res, next) => {
+  console.log(req.query);
+  if (req.query.key != API_KEY) {
+    res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
+  } else {
+    var fbid = req.query.fbid;
+    var restaurantId = req.query.restaurantId;
+    if (fbid != null) {
+      try {
+        const pool = await poolPromise;
+        const queryResult = await pool
+          .request()
+          .input("Fbid", sql.NVarChar, fbid)
+          .input("RestaurantId", sql.Int, restaurantId)
+          .query(
+            "Select Fbid, FoodId, RestaurantId, RestaurantName, FoodName, FoodImage, Price " +
+              " From Favorite Where Fbid = @Fbid And RestaurantId = @restaurantId"
+          );
+        if (queryResult.recordset.length > 0) {
+          res.end(
+            JSON.stringify({ success: true, result: queryResult.recordset })
+          );
+        } else {
+          res.end(JSON.stringify({ success: false, message: "Empty" }));
+        }
+      } catch (err) {
+        res.status(500);
+        res.end(JSON.stringify({ success: false, message: err.message }));
+      }
+    } else {
+      JSON.stringify({
+        success: false,
+        message: "Missing fbid in query",
+      });
+    }
+  }
+});
+
+router.post("/favorite", async (req, res, next) => {
+  console.log(req.body);
+  if (req.body.key != API_KEY) {
+    res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
+  } else {
+    var fbid = req.body.fbid;
+    var foodId = req.body.foodId;
+    var restaurantId = req.body.restaurantId;
+    var restaurantName = req.body.restaurantName;
+    var foodName = req.body.foodName;
+    var foodImage = req.body.foodImage;
+    var price = req.body.price;
+  }
+  if (fbid != null) {
+    try {
+      const pool = await poolPromise;
+      const queryResult = await pool
+        .request()
+        .input("fbid", sql.NVarChar, fbid)
+        .input("foodId", sql.Int, foodId)
+        .input("restaurantId", sql.Int, restaurantId)
+        .input("restaurantName", sql.NVarChar, restaurantName)
+        .input("foodName", sql.NVarChar, foodName)
+        .input("foodImage", sql.NVarChar, foodImage)
+        .input("price", sql.Float, price)
+        .query(
+          "Insert Into Favorite(Fbid, FoodId, RestaurantId, RestaurantName, FoodName, FoodImage, Price) " +
+            " Values(@fbid, @foodId, @restaurantId, @restaurantName, @foodName, @foodImage, @price)"
+        );
+      res.end(JSON.stringify({ success: true, message: "Success" }));
+    } catch (err) {
+      res.status(500);
+      res.end(JSON.stringify({ success: false, message: err.message }));
+    }
+  } else {
+    res.end(
+      JSON.stringify({
+        success: false,
+        message: "Missing fbid of POST request",
+      })
+    );
+  }
+});
+
+router.delete("/favorite", async (req, res, next) => {
+  console.log(req.query);
+  if (req.query.key != API_KEY) {
+    res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
+  } else {
+    var fbid = req.query.fbid;
+    var foodId = req.query.foodId;
+    var restaurantId = req.query.restaurantId;
+  }
+  if (fbid != null) {
+    try {
+      const pool = await poolPromise;
+      const queryResult = await pool
+        .request()
+        .input("fbid", sql.NVarChar, fbid)
+        .input("foodId", sql.Int, foodId)
+        .input("restaurantId", sql.Int, restaurantId)
+        .query(
+          "Delete Favorite Where Fbid = @fbid And FoodId = @foodId And ResTaurantId = @restaurantId "
+        );
+      res.end(JSON.stringify({ success: true, message: "Success" }));
+    } catch (err) {
+      res.status(500);
+      res.end(JSON.stringify({ success: false, message: err.message }));
+    }
+  } else {
+    res.end(
+      JSON.stringify({
+        success: false,
+        message: "Missing fbid of POST request",
+      })
+    );
+  }
+});
 // ---------------------------------------------------
 // ---------------------------------------------------
 // ---------------------------------------------------
