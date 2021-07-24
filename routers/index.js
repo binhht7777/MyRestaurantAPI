@@ -18,15 +18,17 @@ router.get("/user", async (req, res, next) => {
   if (req.query.key != API_KEY) {
     res.end(JSON.stringify({ success: false, message: "Wrong API Key" }));
   } else {
-    var fbid = req.query.fbid;
-    if (fbid != null) {
+    var userPhone = req.query.userPhone;
+    var password = req.query.password;
+    if (userPhone != null && password != null) {
       try {
         const pool = await poolPromise;
         const queryResult = await pool
           .request()
-          .input("fbid", sql.NVarChar, fbid)
+          .input("userPhone", sql.NVarChar, userPhone)
+          .input("password", sql.NVarChar, password)
           .query(
-            "Select UserPhone, Name, Address, Fbid From [User] Where Fbid = @fbid"
+            "Select UserPhone, Name, Address, Fbid, Password From [User] Where UserPhone = @userPhone And Password = @password"
           );
         if (queryResult.recordset.length > 0) {
           res.end(
@@ -56,6 +58,7 @@ router.post("/user", async (req, res, next) => {
     var user_name = req.body.name;
     var user_address = req.body.address;
     var fbid = req.body.fbid;
+    var password = req.body.password;
   }
   if (fbid != null) {
     try {
@@ -66,25 +69,20 @@ router.post("/user", async (req, res, next) => {
         .input("Name", sql.NVarChar, user_name)
         .input("Address", sql.NVarChar, user_address)
         .input("Fbid", sql.NVarChar, fbid)
+        .input("Password", sql.NVarChar, password)
         .query(
-          "If Exists(Select * From [User] Where Fbid = @Fbid )" +
-            " Update [User] Set Name=@Name, Address=@Address Where Fbid = @Fbid" +
+          "If Exists(Select * From [User] Where UserPhone = @UserPhone )" +
+            " Update [User] Set Name=@Name, Address=@Address, Password=@Password Where UserPhone = @UserPhone" +
             " Else" +
-            " Insert Into [User](Fbid, UserPhone, Name, Address) Output Inserted.Fbid, Inserted.UserPhone, Inserted.Name, Inserted.Address  " +
-            " Values(@Fbid, @UserPhone, @Name, @Address)"
+            " Insert Into [User](Fbid, UserPhone, Name, Address, Password) Output Inserted.Fbid, Inserted.UserPhone, Inserted.Name, Inserted.Address, Inserted.Password  " +
+            " Values(@Fbid, @UserPhone, @Name, @Address, @Password)"
         );
       console.log(queryResult);
       if (queryResult.rowsAffected != null) {
         res.send(JSON.stringify({ success: true, message: "Success" }));
       }
 
-      if (queryResult.recordset.length > 0) {
-        res.end(
-          JSON.stringify({ success: true, result: queryResult.recordset })
-        );
-      } else {
-        res.end(JSON.stringify({ success: false, message: "Empty" }));
-      }
+     
     } catch (err) {
       res.status(500);
       res.end(JSON.stringify({ success: false, message: err.message }));
