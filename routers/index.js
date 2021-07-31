@@ -114,7 +114,7 @@ router.get("/restaurant", async (req, res, next) => {
       const queryResult = await pool
         .request()
         .query(
-          "Select Name, Address, Phone, Lat, Lng, UserOwner, Image, PaymentUrl From Restaurant"
+          "Select Id, Name, Address, Phone, Lat, Lng, UserOwner, 'http://192.168.1.5:3000/' + Image as Image, PaymentUrl From Restaurant"
         );
       if (queryResult.recordset.length > 0) {
         res.end(
@@ -231,7 +231,7 @@ router.get("/menu", async (req, res, next) => {
           .request()
           .input("restaurantId", sql.Int, restaurantId)
           .query(
-            "Select t.Id, t.Name, t.Description, t.Image From Menu t Where t.Id In " +
+            "Select t.Id, t.Name, t.Description, 'http://192.168.1.5:3000/' + t.Image as Image From Menu t Where t.Id In " +
               " (Select t1.MenuId From Restaurant_Menu t1 Where t1.RestaurantId = @restaurantId )"
           );
         if (queryResult.recordset.length > 0) {
@@ -274,7 +274,7 @@ router.get("/food", async (req, res, next) => {
           .request()
           .input("menuId", sql.Int, menuId)
           .query(
-            "Select Id, Name, Description, Image, Price, IsSize, IsAddon, Discount From Food Where Id In " +
+            "Select Id, Name, Description, 'http://192.168.1.5:3000/' + Image as Image, Price, IsSize, IsAddon, Discount From Food Where Id In " +
               " (Select FoodId From Menu_Food Where MenuId = @menuId)"
           );
         if (queryResult.recordset.length > 0) {
@@ -310,7 +310,7 @@ router.get("/foodbyid", async (req, res, next) => {
           .request()
           .input("foodId", sql.Int, foodId)
           .query(
-            "Select Id, Name, Description, Image, Price, IsSize, IsAddon, Discount From Food Where Id = @foodId "
+            "Select Id, Name, Description, 'http://192.168.1.5:3000/' + Image as Image, Price, IsSize, IsAddon, Discount From Food Where Id = @foodId "
           );
         if (queryResult.recordset.length > 0) {
           res.end(
@@ -345,7 +345,7 @@ router.get("/searchfood", async (req, res, next) => {
           .request()
           .input("searchQuery", sql.NVarChar, "%" + searchQuery + "%")
           .query(
-            "Select Id, Name, Description, Image, Price, IsSize, IsAddon, Discount From Food Where Name Like @searchQuery "
+            "Select Id, Name, Description, 'http://192.168.1.5:3000/' + Image as Image, Price, IsSize, IsAddon, Discount From Food Where Name Like @searchQuery "
           );
         if (queryResult.recordset.length > 0) {
           res.end(
